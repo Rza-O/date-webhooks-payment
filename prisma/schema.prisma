@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  clerkId   String   @unique
+  name      String
+  email     String   @unique
+  role      Role     @default(USER)
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  bookings       Booking[]
+  availabilities Availability[]
+  bundleBookings BundleBooking[]
+  payments       Payment[]
+  paymentLogs    PaymentLog[]
+}
+
+model Room {
+  id             Int            @id @default(autoincrement())
+  name           String
+  capacity       Int
+  location       String
+  timezone       String         @default("UTC")
+  availabilities Availability[]
+}
+
+model BundleBooking {
+  id        String       @id @default(uuid())
+  userId    Int
+  status    BundleStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+
+  user     User      @relation(fields: [userId], references: [id])
+  bookings Booking[]
+}
+
+model Booking {
+  id              String        @id @default(uuid())
+  userId          Int
+  slotId          Int
+  bundleBookingId String?
+  status          BookingStatus @default(PENDING)
+  bookedAt        DateTime      @default(now())
+  startTime       DateTime
+  endTime         DateTime
+  timezone        String
+
+  // Relations
+  user          User           @relation(fields: [userId], references: [id])
+  slot          Slot           @relation(fields: [slotId], references: [id])
+  bundleBooking BundleBooking? @relation(fields: [bundleBookingId], references: [id])
+  payments      Payment[]
+  paymentLogs   PaymentLog[]
+}
+
+model Availability {
+  id       Int      @id @default(autoincrement())
+  userId   Int
+  roomId   Int
+  date     DateTime
+  timezone String
+
+  // Relations
+  slots Slot[]
+  user  User   @relation(fields: [userId], references: [id])
+  room  Room   @relation(fields: [roomId], references: [id])
+}
+
+model Slot {
+  id             Int      @id @default(autoincrement())
+  availabilityId Int
+  startTime      DateTime
+  endTime        DateTime
+  isBooked       Boolean  @default(false)
+
+  // Relations
+  availability Availability @relation(fields: [availabilityId], references: [id])
+  bookings     Booking[]
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  userId        Int
+  bookingId     String?
+  amount        Float
+  currency      String        @default("USD")
+  status        PaymentStatus @default(COMPLETED)
+  method        String
+  transactionId String?
+  createdAt     DateTime      @default(now())
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+}
+
+model PaymentLog {
+  id           String           @id @default(uuid())
+  userId       Int
+  bookingId    String?
+  amount       Float
+  currency     String           @default("USD")
+  status       PaymentLogStatus @default(INTENT)
+  method       String
+  errorMessage String?
+  createdAt    DateTime         @default(now())
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+}
+
+enum BundleStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum PaymentLogStatus {
+  INTENT
+  FAILED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  COMPLETED
+  REFUNDED
+  FAILED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PaymentType {
+  SINGLE
+  BUNDLE
+}
