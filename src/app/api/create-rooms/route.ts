@@ -52,26 +52,32 @@ export const POST = async (req: Request) => {
 					create: Object.entries(parsedData.availability).flatMap(
 						([day, slots]) =>
 							Array.from({ length: 12 }).flatMap((_, weekOffset) => {
-								const dayOfWeek = days.indexOf(day);
+								const dayOfWeek = days.indexOf(day); // Get the index of the current day in the 'days' array (0 for "Sun", 1 for "Mon", etc.)
 								const startDate = new Date(
 									currentYear,
 									currentMonth,
 									currentDate
-								);
+								); // Create a new Date object using the current year, month, and day.
+
 								startDate.setDate(
 									startDate.getDate() +
-										((dayOfWeek - startDate.getDay() + 7) % 7) +
-										weekOffset * 7
+										((dayOfWeek - startDate.getDay() + 7) % 7) + // Calculate how many days to add to reach the target day of the week
+										weekOffset * 7 // Adjust for each of the next 12 weeks (weekOffset ranges from 0 to 11)
 								);
+
+								// Example output of startDate:
+								// Let's assume current date is March 18, 2025 (Tuesday)
+								// If `dayOfWeek` is 2 (for "Tue"), and `startDate` is already a Tuesday,
+								// this will calculate the next Tuesday from March 18th, and for the second week, it will set the date to March 25th, etc.
 
 								return Object.entries(slots).map(
 									([timeSlot, isAvailable]) => {
 										const cleanedTimeSlot = timeSlot
-											.replace(/AM|PM/g, "")
+											.replace(/AM|PM/g, "") // Remove AM/PM if present (we assume it's 24-hour format without AM/PM)
 											.trim();
 										const [hours, minutes] = cleanedTimeSlot
 											.split(":")
-											.map(Number);
+											.map(Number); // Split the time into hours and minutes as numbers.
 
 										if (
 											isNaN(hours) ||
@@ -80,25 +86,25 @@ export const POST = async (req: Request) => {
 											minutes > 59
 										) {
 											throw new Error(
-												`Invalid time format: ${timeSlot}`
+												`Invalid time format: ${timeSlot}` // If hours or minutes are invalid, throw an error
 											);
 										}
 
 										const startTime = new Date(startDate);
-										startTime.setHours(hours, minutes, 0, 0);
+										startTime.setHours(hours, minutes, 0, 0); // Set the start time of the availability slot.
 
 										const endTime = new Date(startTime);
-										endTime.setHours(startTime.getHours() + 1);
+										endTime.setHours(startTime.getHours() + 1); // The end time is 1 hour after the start time.
 
 										return {
-											date: startDate,
-											timezone: parsedData.timezone,
-											user: { connect: { id: dbUser.id } },
+											date: startDate, // The date for this availability slot.
+											timezone: parsedData.timezone, // Timezone from the parsed data.
+											user: { connect: { id: dbUser.id } }, // User that created this availability slot.
 											slots: {
 												create: {
-													startTime,
-													endTime,
-													isBooked: !isAvailable,
+													startTime, // The computed start time for the slot.
+													endTime, // The computed end time for the slot.
+													isBooked: !isAvailable, // If the slot is available, it’s not booked (isBooked: false); if not available, it’s booked (isBooked: true).
 												},
 											},
 										};
@@ -110,14 +116,16 @@ export const POST = async (req: Request) => {
 			},
 		});
 
+
 		return NextResponse.json(
 			{ message: "Room created successfully", room },
 			{ status: 201 }
 		);
 	} catch (error) {
 		console.error("Error creating room:", error);
+		const errorMessage = error instanceof Error ? error.message : "Failed to create room";
 		return NextResponse.json(
-			{ error: error.message || "Failed to create room" },
+			{ error: errorMessage },
 			{ status: 500 }
 		);
 	}

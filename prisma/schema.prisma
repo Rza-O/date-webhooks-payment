@@ -8,14 +8,15 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  clerkId   String   @unique
-  name      String
-  email     String   @unique
-  role      Role     @default(USER)
-  timezone  String   @default("UTC")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               Int      @id @default(autoincrement())
+  clerkId          String   @unique
+  name             String
+  email            String   @unique
+  role             Role     @default(USER)
+  timezone         String   @default("UTC")
+  stripeCustomerId String? // Add this field to store Stripe Customer ID
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
   bookings       Booking[]
@@ -26,15 +27,18 @@ model User {
 }
 
 model Room {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   name      String
   capacity  Int
   location  String
-  timezone  String  @default("UTC")
-  isDeleted Boolean @default(false)
+  timezone  String   @default("UTC")
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   availabilities Availability[]
   bookings       Booking[]
+  Slot           Slot[]
 }
 
 model BundleBooking {
@@ -50,7 +54,7 @@ model BundleBooking {
 model Booking {
   id              String        @id @default(uuid())
   userId          Int
-  slotId          Int
+  slotId          Int           @unique
   bundleBookingId String?
   status          BookingStatus @default(PENDING)
   bookedAt        DateTime      @default(now())
@@ -87,9 +91,11 @@ model Slot {
   startTime      DateTime
   endTime        DateTime
   isBooked       Boolean  @default(false)
+  roomId         Int? // Add this field if slots belong to rooms
 
   // Relations
   availability Availability @relation(fields: [availabilityId], references: [id])
+  room         Room?        @relation(fields: [roomId], references: [id])
   bookings     Booking[]
 }
 
@@ -110,15 +116,16 @@ model Payment {
 }
 
 model PaymentLog {
-  id           String           @id @default(uuid())
-  userId       Int
-  bookingId    String?
-  amount       Float
-  currency     String           @default("USD")
-  status       PaymentLogStatus @default(INTENT)
-  method       String
-  errorMessage String?
-  createdAt    DateTime         @default(now())
+  id                    String           @id @default(uuid())
+  userId                Int
+  bookingId             String?
+  amount                Float
+  currency              String           @default("USD")
+  status                PaymentLogStatus @default(INTENT)
+  method                String
+  errorMessage          String?
+  stripePaymentIntentId String? // Add this field to store Stripe Payment Intent ID
+  createdAt             DateTime         @default(now())
 
   // Relations
   user    User     @relation(fields: [userId], references: [id])
@@ -135,6 +142,7 @@ enum PaymentLogStatus {
   INTENT
   FAILED
   CANCELLED
+  COMPLETED
 }
 
 enum PaymentStatus {
