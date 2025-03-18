@@ -1,37 +1,37 @@
-"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useUser } from '@/hooks/useUser';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '../ui/button';
+import BookingModal from '../user/BookingModal';
+
 
 const fetchRooms = async () => {
    const { data } = await axios.get("/api/rooms");
    return data.rooms;
 };
 
-const AllRoms = () => {
+const AllRooms = () => {
    const queryClient = useQueryClient();
    const { user, isLoading: userLoading } = useUser();
+   const [selectedRoom, setSelectedRoom] = useState<any>(null);
 
    const { data: rooms, isLoading: roomsLoading, error } = useQuery({
       queryKey: ["rooms"],
       queryFn: fetchRooms,
-      
    });
 
-   console.log(rooms);
-   console.log(user);
+   console.log(rooms)
 
-   // Delete Mutation
    const { mutate: deleteRoomMutation, isPending: roomDeletePending } = useMutation({
       mutationFn: async (id: number) => {
          await axios.patch(`/api/rooms/${id}`);
       },
       onSuccess: () => {
-         queryClient.invalidateQueries({ queryKey: ["rooms"] })
+         queryClient.invalidateQueries({ queryKey: ["rooms"] });
       },
-   })
+   });
 
    if (userLoading || roomsLoading) return <p>Loading...</p>;
    if (error) return <p>Failed to load rooms.</p>;
@@ -56,14 +56,24 @@ const AllRoms = () => {
                )}
 
                {user?.role === 'USER' && (
-                  <Button className="bg-blue-500 text-white mt-2">
+                  <Button
+                     className="bg-blue-500 text-white mt-2"
+                     onClick={() => setSelectedRoom(room)}
+                  >
                      Book Room
                   </Button>
                )}
             </div>
          ))}
+
+         {selectedRoom && (
+            <BookingModal
+               room={selectedRoom}
+               onClose={() => setSelectedRoom(null)}
+            />
+         )}
       </div>
    );
 };
 
-export default AllRoms;
+export default AllRooms;

@@ -17,6 +17,8 @@ const roomSchema = z.object({
 	),
 });
 
+const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 export const POST = async (req: Request) => {
 	try {
 		const user = await currentUser();
@@ -35,7 +37,10 @@ export const POST = async (req: Request) => {
 		const requestData = await req.json();
 		const parsedData = roomSchema.parse(requestData);
 
-		const today = new Date().toISOString().split("T")[0]; // Get YYYY-MM-DD
+		const today = new Date();
+		const currentYear = today.getFullYear();
+		const currentMonth = today.getMonth();
+		const currentDate = today.getDate();
 
 		const room = await prisma.room.create({
 			data: {
@@ -46,55 +51,59 @@ export const POST = async (req: Request) => {
 				availabilities: {
 					create: Object.entries(parsedData.availability).flatMap(
 						([day, slots]) =>
-							Object.entries(slots).map(([timeSlot, isAvailable]) => {
-								// **Fix:** Remove AM/PM if time is in 24-hour format
-								const cleanedTimeSlot = timeSlot
-									.replace(/AM|PM/g, "")
-									.trim();
-
-								// Split hours and minutes
-								const [hours, minutes] = cleanedTimeSlot
-									.split(":")
-									.map(Number);
-
-								// **Fix:** Ensure hours are valid
-								if (
-									isNaN(hours) ||
-									isNaN(minutes) ||
-									hours > 23 ||
-									minutes > 59
-								) {
-									throw new Error(`Invalid time format: ${timeSlot}`);
-								}
-
-								// Format as ISO string
-								const dateTimeString = `${today}T${String(
-									hours
-								).padStart(2, "0")}:${String(minutes).padStart(
-									2,
-									"0"
-								)}:00.000Z`;
-
-								const startTime = new Date(dateTimeString);
-								const endTime = new Date(startTime);
-								endTime.setHours(startTime.getHours() + 1);
-
-								console.log(
-									`Parsed DateTime: ${startTime.toISOString()}`
+							Array.from({ length: 12 }).flatMap((_, weekOffset) => {
+								const dayOfWeek = days.indexOf(day);
+								const startDate = new Date(
+									currentYear,
+									currentMonth,
+									currentDate
+								);
+								startDate.setDate(
+									startDate.getDate() +
+										((dayOfWeek - startDate.getDay() + 7) % 7) +
+										weekOffset * 7
 								);
 
-								return {
-									date: new Date(today),
-									timezone: parsedData.timezone,
-									user: { connect: { id: dbUser.id } },
-									slots: {
-										create: {
-											startTime,
-											endTime,
-											isBooked: !isAvailable,
-										},
-									},
-								};
+								return Object.entries(slots).map(
+									([timeSlot, isAvailable]) => {
+										const cleanedTimeSlot = timeSlot
+											.replace(/AM|PM/g, "")
+											.trim();
+										const [hours, minutes] = cleanedTimeSlot
+											.split(":")
+											.map(Number);
+
+										if (
+											isNaN(hours) ||
+											isNaN(minutes) ||
+											hours > 23 ||
+											minutes > 59
+										) {
+											throw new Error(
+												`Invalid time format: ${timeSlot}`
+											);
+										}
+
+										const startTime = new Date(startDate);
+										startTime.setHours(hours, minutes, 0, 0);
+
+										const endTime = new Date(startTime);
+										endTime.setHours(startTime.getHours() + 1);
+
+										return {
+											date: startDate,
+											timezone: parsedData.timezone,
+											user: { connect: { id: dbUser.id } },
+											slots: {
+												create: {
+													startTime,
+													endTime,
+													isBooked: !isAvailable,
+												},
+											},
+										};
+									}
+								);
 							})
 					),
 				},
