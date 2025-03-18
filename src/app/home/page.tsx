@@ -1,11 +1,16 @@
 "use client";
+import RoomForm from "@/components/admin/AddForm";
+import AllRoms from "@/components/shared/AllRoms";
 import DetectTimezone from "@/components/sideEffects/DetectTimezone";
+import { useUser } from "@/hooks/useUser";
 import { SignOutButton, useAuth } from "@clerk/nextjs";
 import axios from "axios";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { IoAdd } from "react-icons/io5";
 
 export default function Home() {
+   const [isFormShown, setIsFormShown] = useState(false);
+   const { user } = useUser();
    const { userId } = useAuth();
    useEffect(() => {
       if (userId) {
@@ -23,7 +28,12 @@ export default function Home() {
          <h1 className="text-4xl font-bold">Welcome Room Booking</h1>
          <SignOutButton />
          <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-            <button className="btn"><IoAdd />Add Room</button>
+            {user?.role === "ADMIN" && <button onClick={() => setIsFormShown(!isFormShown)} className="btn"><IoAdd />Add Room</button>}
+            {isFormShown && <RoomForm />}
+            <div>
+               <h1>Here are all the room added</h1>
+               <AllRoms />
+            </div>
          </main>
       </div>
    );

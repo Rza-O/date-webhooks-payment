@@ -26,12 +26,15 @@ model User {
 }
 
 model Room {
-  id             Int            @id @default(autoincrement())
-  name           String
-  capacity       Int
-  location       String
-  timezone       String         @default("UTC")
+  id        Int     @id @default(autoincrement())
+  name      String
+  capacity  Int
+  location  String
+  timezone  String  @default("UTC")
+  isDeleted Boolean @default(false)
+
   availabilities Availability[]
+  bookings       Booking[]
 }
 
 model BundleBooking {
@@ -61,6 +64,8 @@ model Booking {
   bundleBooking BundleBooking? @relation(fields: [bundleBookingId], references: [id])
   payments      Payment[]
   paymentLogs   PaymentLog[]
+  Room          Room?          @relation(fields: [roomId], references: [id])
+  roomId        Int?
 }
 
 model Availability {
