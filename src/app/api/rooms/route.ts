@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { prisma } from "@/lib/prismaClient";
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "../../../lib/prismaClient";
 
 export const GET = async (req: NextRequest) => {
 	try {

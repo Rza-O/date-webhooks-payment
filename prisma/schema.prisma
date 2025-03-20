@@ -56,20 +56,20 @@ model Booking {
   userId          Int
   slotId          Int           @unique
   bundleBookingId String?
-  status          BookingStatus @default(PENDING)
+  status          BookingStatus @default(CONFIRMED)
   bookedAt        DateTime      @default(now())
   startTime       DateTime
   endTime         DateTime
   timezone        String
+  roomId          Int?
+  payments        Payment[]
+  paymentLogs     PaymentLog[]
 
   // Relations
   user          User           @relation(fields: [userId], references: [id])
   slot          Slot           @relation(fields: [slotId], references: [id])
   bundleBooking BundleBooking? @relation(fields: [bundleBookingId], references: [id])
-  payments      Payment[]
-  paymentLogs   PaymentLog[]
   Room          Room?          @relation(fields: [roomId], references: [id])
-  roomId        Int?
 }
 
 model Availability {

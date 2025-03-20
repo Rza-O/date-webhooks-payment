@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prismaClient";
+
 import { z } from "zod";
 import { currentUser } from "@clerk/nextjs/server";
+import { prisma } from "../../../lib/prismaClient";
 
 const roomSchema = z.object({
 	name: z.string().min(3, "Room name must be at least 3 characters"),

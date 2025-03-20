@@ -1,9 +1,9 @@
 "use client";
-import DetectTimezone from "@/components/sideEffects/DetectTimezone";
 import { SignUp, useAuth } from "@clerk/nextjs";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import DetectTimezone from "../components/sideEffects/DetectTimezone";
 
 export default function CheckSignIn() {
 
@@ -14,7 +14,7 @@ export default function CheckSignIn() {
     if (isSignedIn) {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       try {
-        axios.post("/api/timezone", { userId, timezone });
+        axios.post("/api/updateTZ", { userId, timezone });
         router.push("/home");
       } catch (error) {
         console.error("Error updating time zone:", error);
