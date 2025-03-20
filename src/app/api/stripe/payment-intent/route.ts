@@ -1,13 +1,7 @@
-
 import { currentUser } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prismaClient";
 import { stripe } from "../../../../lib/stripe";
-
-interface IPaymentIntent {
-	amount: number;
-	bookingId: string;
-}
 
 export const POST = async (req: NextRequest) => {
 	try {
@@ -20,7 +14,8 @@ export const POST = async (req: NextRequest) => {
 			);
 		}
 
-		const { amount = 2300, bookingId }: IPaymentIntent = await req.json();
+		const { amount = 2300, metadata } = await req.json();
+		console.log("Received Metadata in intent:", metadata);
 
 		const user = await prisma.user.findUnique({
 			where: { clerkId: loggedInUser.id },
@@ -50,17 +45,14 @@ export const POST = async (req: NextRequest) => {
 			amount,
 			currency: "usd",
 			customer: customerId,
-			metadata: {
-				userId: user.id.toString(),
-				bookingId,
-			},
+			metadata,
 			automatic_payment_methods: { enabled: true },
 		});
 
 		await prisma.paymentLog.create({
 			data: {
 				userId: user.id,
-				bookingId,
+				
 				amount: amount / 100,
 				currency: "USD",
 				status: "INTENT",
@@ -68,7 +60,7 @@ export const POST = async (req: NextRequest) => {
 				stripePaymentIntentId: paymentIntent.id,
 			},
 		});
-		console.log('this is client secret =>',paymentIntent.client_secret);
+		console.log("this is client secret =>", paymentIntent.client_secret);
 
 		return NextResponse.json({
 			clientSecret: paymentIntent.client_secret,

@@ -13,6 +13,7 @@ export const POST = async (req: NextRequest) => {
 	let event: Stripe.Event;
 	try {
 		const rawBody = await req.text();
+		// console.log("👅👅👅👅👅 Raw Body=>", rawBody);
 		event = stripe.webhooks.constructEvent(
 			rawBody,
 			signature,
@@ -29,7 +30,7 @@ export const POST = async (req: NextRequest) => {
 	try {
 		const intent = event.data.object as Stripe.PaymentIntent;
 		console.log("💲💲🚀🚀⭐⭐ =>", intent.metadata);
-		console.log("🔚🔚🔚🔚🔚🔚🔚🔚")
+		console.log("🔚🔚🔚🔚🔚🔚🔚🔚");
 
 		switch (event.type) {
 			case "payment_intent.succeeded":

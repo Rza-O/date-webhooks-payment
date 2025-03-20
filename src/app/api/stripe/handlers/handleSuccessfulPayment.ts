@@ -1,11 +1,36 @@
-
 import Stripe from "stripe";
 import { prisma } from "../../../../lib/prismaClient";
 
 export const handleSuccessfulPayment = async (intent: Stripe.PaymentIntent) => {
-	const { bookingId, userId } = intent.metadata;
+	const metadata = intent.metadata;
 
-	// Delete the old 'INTENT' entry
+	if (
+		!metadata.userId ||
+		!metadata.slotId ||
+		!metadata.roomId ||
+		!metadata.startTime ||
+		!metadata.endTime ||
+		!metadata.timezone
+	) {
+		throw new Error("Missing required metadata for booking creation.");
+	}
+
+	// Create the booking first
+	const booking = await prisma.booking.create({
+		data: {
+			userId: Number(metadata.userId),
+			slotId: Number(metadata.slotId),
+			roomId: Number(metadata.roomId),
+			startTime: new Date(metadata.startTime),
+			endTime: new Date(metadata.endTime),
+			timezone: metadata.timezone,
+			status: "CONFIRMED", // Set the status to CONFIRMED
+		},
+	});
+
+	console.log("Booking Created:", booking);
+
+	// Delete the old 'INTENT' entry in PaymentLog
 	await prisma.paymentLog.deleteMany({
 		where: {
 			stripePaymentIntentId: intent.id,
@@ -13,11 +38,11 @@ export const handleSuccessfulPayment = async (intent: Stripe.PaymentIntent) => {
 		},
 	});
 
-	// Create a new entry in Payment Table
+	// Create a new entry in the Payment table
 	await prisma.payment.create({
 		data: {
-			userId: Number(userId),
-			bookingId,
+			userId: Number(metadata.userId),
+			bookingId: booking.id, // Use the newly created booking ID
 			amount: intent.amount / 100,
 			currency: "USD",
 			status: "COMPLETED",
@@ -26,9 +51,5 @@ export const handleSuccessfulPayment = async (intent: Stripe.PaymentIntent) => {
 		},
 	});
 
-	// Update Booking Status to CONFIRMED
-	await prisma.booking.update({
-		where: { id: bookingId },
-		data: { status: "CONFIRMED" },
-	});
+	console.log("Payment Created Successfully");
 };

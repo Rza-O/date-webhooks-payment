@@ -52,7 +52,7 @@ model BundleBooking {
 }
 
 model Booking {
-  id              String        @id @default(uuid())
+  id              Int           @id @unique @default(autoincrement())
   userId          Int
   slotId          Int           @unique
   bundleBookingId String?
@@ -102,7 +102,7 @@ model Slot {
 model Payment {
   id            String        @id @default(uuid())
   userId        Int
-  bookingId     String?
+  bookingId     Int?
   amount        Float
   currency      String        @default("USD")
   status        PaymentStatus @default(COMPLETED)
@@ -118,7 +118,7 @@ model Payment {
 model PaymentLog {
   id                    String           @id @default(uuid())
   userId                Int
-  bookingId             String?
+  bookingId             Int?
   amount                Float
   currency              String           @default("USD")
   status                PaymentLogStatus @default(INTENT)

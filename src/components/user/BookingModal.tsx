@@ -1,4 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+"use client"
+import { fromZonedTime } from "date-fns-tz"; // Import date-fns-tz
+
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { useMutation } from "@tanstack/react-query";
@@ -7,9 +10,11 @@ import { format, isSameDay, isWeekend } from "date-fns";
 import React, { useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
+import toast from "react-hot-toast";
+import { useUser } from "../../hooks/useUser";
+import DetectTimezone from "../sideEffects/DetectTimezone";
 import { Button } from "../ui/button";
 import CheckoutForm from "./CheckoutForm";
-import toast from "react-hot-toast";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -22,6 +27,10 @@ const BookingModal: React.FC<BookingModalProps> = ({ room, onClose }) => {
    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
    const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
    const [clientSecret, setClientSecret] = useState<string | null>(null);
+   const { user } = useUser();
+   const timezone = DetectTimezone();
+   // const userId = user.clerkId;
+   // console.log(user.clerkId)
 
    const handleSlotSelection = (slotId: number) => setSelectedSlot(slotId);
 
@@ -36,34 +45,58 @@ const BookingModal: React.FC<BookingModalProps> = ({ room, onClose }) => {
 
    const createBookingMutation = useMutation({
       mutationFn: async () => {
-         if (!selectedSlot) {
-            toast.error("Please select a slot before booking.");
-            throw new Error("No slot selected.");
+         try {
+            if (!selectedSlot) {
+               toast.error("Please select a slot before booking.");
+               throw new Error("No slot selected.");
+            }
+
+            const selectedSlotData = selectedAvailability
+               .flatMap((availability: any) => availability.slots)
+               .find((slot: any) => slot.id === selectedSlot);
+
+            console.log("Selected Slot Data Before Check:", selectedSlotData);
+
+            if (!selectedSlotData) {
+               toast.error("Invalid slot selection. Please try again.");
+               throw new Error("Selected slot not found.");
+            }
+            const startTimeUtc = fromZonedTime(
+               new Date(selectedSlotData.startTime),
+               timezone
+            );
+            const endTimeUtc = fromZonedTime(
+               new Date(selectedSlotData.endTime),
+               timezone
+            );
+
+            console.log("Booking Data Before API Call:", {
+               amount: 2300,
+               slotId: selectedSlot,
+               roomId: room.id,
+               userId: room.userId,
+               timezone,
+               startTime: startTimeUtc,
+               endTime: endTimeUtc,
+            });
+
+            const response = await axios.post("/api/stripe/payment-intent", {
+               amount: 2300,
+               metadata: {
+                  userId: user.id,
+                  slotId: selectedSlot,
+                  roomId: room.id,
+                  startTime: selectedSlotData.startTime,
+                  endTime: selectedSlotData.endTime,
+                  timezone: 'UTC',
+               },
+            });
+
+            return response.data;
+         } catch (error) {
+            console.error("Error in Mutation Function:", error);
+            throw error;
          }
-
-         // Find the correct slot from all available slots
-         const selectedSlotData = selectedAvailability
-            .flatMap((availability: any) => availability.slots)
-            .find((slot: any) => slot.id === selectedSlot);
-
-         if (!selectedSlotData) {
-            toast.error("Invalid slot selection. Please try again.");
-            throw new Error("Selected slot not found.");
-         }
-
-         console.log("Booking Slot Data:", selectedSlotData);
-
-         const response = await axios.post("/api/stripe/payment-intent", {
-            amount: 2300,
-            slotId: selectedSlot,
-            roomId: room.id,
-            userId: room.userId,
-            timezone: room.timezone,
-            startTime: selectedSlotData.startTime,
-            endTime: selectedSlotData.endTime,
-         });
-
-         return response.data;
       },
       onSuccess: (data) => {
          console.log("Payment Intent Created:", data);
@@ -74,7 +107,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ room, onClose }) => {
          toast.error("Failed to confirm booking. Please try again.");
       },
    });
-
    const handleConfirmBooking = () => {
       if (!selectedSlot) {
          toast.error("Please select a slot before confirming.");
