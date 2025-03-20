@@ -30,6 +30,13 @@ export const handleSuccessfulPayment = async (intent: Stripe.PaymentIntent) => {
 
 	console.log("Booking Created:", booking);
 
+	const slotBooking = await prisma.slot.update({
+		where: { id: booking.slotId },
+		data: { isBooked: true },
+	});
+
+	console.log("slot updated=>", slotBooking);
+
 	// Delete the old 'INTENT' entry in PaymentLog
 	await prisma.paymentLog.deleteMany({
 		where: {

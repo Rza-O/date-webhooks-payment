@@ -4,10 +4,10 @@ import { prisma } from "../../../lib/prismaClient";
 export const POST = async (req: Request) => {
 	try {
 		const requestData = await req.json();
-		const { userId, ianaTZ } = requestData;
+		const { userId, timezone } = requestData;
 		console.log(requestData);
 		// Check if the request is valid
-		if (!userId || !ianaTZ) {
+		if (!userId || !timezone) {
 			return NextResponse.json(
 				{ message: "Invalid request" },
 				{ status: 400 }
@@ -16,7 +16,7 @@ export const POST = async (req: Request) => {
 		// Update the user's ianaTZ in the database
 		const userTZUpdate = await prisma.user.update({
 			where: { clerkId: userId },
-			data: { timezone: ianaTZ },
+			data: { timezone: timezone },
 		});
 		return NextResponse.json(
 			{ message: "Time zone updated", userTZUpdate },

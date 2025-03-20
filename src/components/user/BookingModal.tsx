@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
-import { fromZonedTime } from "date-fns-tz"; // Import date-fns-tz
 
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { format, isSameDay, isWeekend } from "date-fns";
 import React, { useState } from "react";
@@ -24,6 +23,7 @@ interface BookingModalProps {
 }
 
 const BookingModal: React.FC<BookingModalProps> = ({ room, onClose }) => {
+   const queryClient = useQueryClient();
    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
    const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
    const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -61,14 +61,9 @@ const BookingModal: React.FC<BookingModalProps> = ({ room, onClose }) => {
                toast.error("Invalid slot selection. Please try again.");
                throw new Error("Selected slot not found.");
             }
-            const startTimeUtc = fromZonedTime(
-               new Date(selectedSlotData.startTime),
-               timezone
-            );
-            const endTimeUtc = fromZonedTime(
-               new Date(selectedSlotData.endTime),
-               timezone
-            );
+            const startTimeUtc = new Date(selectedSlotData.startTime).toISOString();
+            const endTimeUtc = new Date(selectedSlotData.endTime).toISOString();
+
 
             console.log("Booking Data Before API Call:", {
                amount: 2300,
@@ -101,6 +96,8 @@ const BookingModal: React.FC<BookingModalProps> = ({ room, onClose }) => {
       onSuccess: (data) => {
          console.log("Payment Intent Created:", data);
          setClientSecret(data.clientSecret);
+         queryClient.invalidateQueries({ queryKey: ["rooms"] });
+         queryClient.refetchQueries({ queryKey: ["rooms"] });
       },
       onError: (error) => {
          console.error("Booking Error:", error);
@@ -132,16 +129,18 @@ const BookingModal: React.FC<BookingModalProps> = ({ room, onClose }) => {
                   <p className="font-semibold">Available Slots:</p>
                   <div className="flex flex-wrap gap-2 mt-2">
                      {selectedAvailability.flatMap((availability: any) =>
-                        availability.slots.map((slot: any) => (
-                           <Button
-                              key={slot.id}
-                              className={`px-4 py-2 ${selectedSlot === slot.id ? "bg-green-500" : "bg-gray-300"
-                                 }`}
-                              onClick={() => handleSlotSelection(slot.id)}
-                           >
-                              {format(new Date(slot.startTime), "HH:mm")}
-                           </Button>
-                        ))
+                        availability.slots
+                           .filter((slot: any) => !slot.isBooked) // Only show available slots
+                           .map((slot: any) => (
+                              <Button
+                                 key={slot.id}
+                                 className={`px-4 py-2 ${selectedSlot === slot.id ? "bg-green-500" : "bg-gray-300"
+                                    }`}
+                                 onClick={() => handleSlotSelection(slot.id)}
+                              >
+                                 {format(new Date(slot.startTime), "HH:mm")}
+                              </Button>
+                           ))
                      )}
                   </div>
                </div>
