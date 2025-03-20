@@ -15,7 +15,7 @@ export const POST = async (req: Request) => {
 		}
 		// Update the user's ianaTZ in the database
 		const userTZUpdate = await prisma.user.update({
-			where: { clerkId: userId },
+			where: { id: userId },
 			data: { timezone: timezone },
 		});
 		return NextResponse.json(

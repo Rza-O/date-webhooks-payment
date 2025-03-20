@@ -18,7 +18,7 @@ const DetectTimezone = () => {
    }, []);
 
    useEffect(() => {
-      if (!userId || !selectedTimezone) return; // Ensure user and timezone are valid
+      if (!userId || !selectedTimezone) return;
 
       localStorage.setItem("timeZone", selectedTimezone);
 
@@ -27,7 +27,7 @@ const DetectTimezone = () => {
          .catch(() => toast.error("Failed to update timezone"));
    }, [selectedTimezone, userId]);
 
-   if (!selectedTimezone) return null; // Prevent rendering until timezone is loaded
+   if (!selectedTimezone) return null;
 
    return (
       <div className="w-3/4">
