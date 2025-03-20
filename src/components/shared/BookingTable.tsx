@@ -1,10 +1,8 @@
-"use client";
-import { useEffect, useState } from "react";
 import axios from "axios";
-import { useAuth } from "@clerk/nextjs";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import TimezoneSelect from "react-timezone-select";
 import { useUser } from "../../hooks/useUser";
-import toast from "react-hot-toast";
 
 interface Booking {
    id: number;
@@ -18,7 +16,7 @@ interface Booking {
 const BookingTable = () => {
    const { user } = useUser();
    const userId = user?.id;
-   const clerkId = user?.clerkId
+   const clerkId = user?.clerkId;
    const [bookings, setBookings] = useState<Booking[]>([]);
    const [selectedTimezone, setSelectedTimezone] = useState<string | null>(null);
 
@@ -32,16 +30,23 @@ const BookingTable = () => {
    useEffect(() => {
       if (!userId || !selectedTimezone) return;
 
-      localStorage.setItem("timeZone", selectedTimezone);
+      // Only call updateTZ if the timezone has actually changed
+      const currentTimezone = localStorage.getItem("timeZone");
+      if (currentTimezone !== selectedTimezone) {
+         localStorage.setItem("timeZone", selectedTimezone);
 
+         // Send timezone update request to backend
+         axios.post("/api/updateTZ", { userId, timezone: selectedTimezone })
+            .then(() => toast.success(`Timezone updated to ${selectedTimezone}`))
+            .catch(() => toast.error("Failed to update timezone"));
+      }
+
+      // Fetch bookings based on the selected timezone
       axios
          .get(`/api/bookings?userId=${userId}&timezone=${selectedTimezone}`)
          .then((res) => setBookings(res.data.bookings))
          .catch(() => console.error("Failed to fetch bookings"));
-      axios.post("/api/updateTZ", { userId, timezone: selectedTimezone })
-         .then(() => toast.success(`Timezone updated to ${selectedTimezone}`))
-         .catch(() => toast.error("Failed to update timezone"));
-   }, [selectedTimezone, userId]);
+   }, [selectedTimezone, userId]); 
 
    return (
       <div className="p-4">
@@ -71,7 +76,7 @@ const BookingTable = () => {
                   ))
                ) : (
                   <tr>
-                     <td colSpan={4} className="text-center p-4">
+                     <td colSpan={5} className="text-center p-4">
                         No bookings found.
                      </td>
                   </tr>

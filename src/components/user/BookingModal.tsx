@@ -28,7 +28,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ room, onClose }) => {
    const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
    const [clientSecret, setClientSecret] = useState<string | null>(null);
    const { user } = useUser();
-   const timezone = DetectTimezone();
+   // const timezone = DetectTimezone();
    // const userId = user.clerkId;
    // console.log(user.clerkId)
 
@@ -65,15 +65,14 @@ const BookingModal: React.FC<BookingModalProps> = ({ room, onClose }) => {
             const endTimeUtc = new Date(selectedSlotData.endTime).toISOString();
 
 
-            console.log("Booking Data Before API Call:", {
-               amount: 2300,
-               slotId: selectedSlot,
-               roomId: room.id,
-               userId: room.userId,
-               timezone,
-               startTime: startTimeUtc,
-               endTime: endTimeUtc,
-            });
+            // console.log("Booking Data Before API Call:", {
+            //    amount: 2300,
+            //    slotId: selectedSlot,
+            //    roomId: room.id,
+            //    userId: room.userId,
+            //    startTime: startTimeUtc,
+            //    endTime: endTimeUtc,
+            // });
 
             const response = await axios.post("/api/stripe/payment-intent", {
                amount: 2300,
@@ -113,7 +112,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ room, onClose }) => {
    };
 
    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center overflow-y-scroll">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center overflow-y-scroll z-50">
          <div className="bg-white p-6 rounded-lg w-[400px]">
             <h2 className="text-xl font-bold mb-4">{room.name} - Booking</h2>
 
